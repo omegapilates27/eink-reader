@@ -10,13 +10,13 @@
   <meta name="theme-color" content="#e5e4df" />
   <link id="apple-touch-icon-link" rel="apple-touch-icon" sizes="180x180" />
   <link id="pwa-manifest-link" rel="manifest" />
-  <title>E-Ink Reader — Đọc Sách & PDF Dịu Mắt</title>
+  <title>E-Ink Reader — Đọc & Nghe Sách Giấy Điện Tử</title>
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- JSZip v3.10.1 for EPUB parsing -->
+  <!-- JSZip for EPUB parsing -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
-  <!-- PDF.js v3.11.174 for iOS Files PDF parsing & high-DPR canvas rendering -->
+  <!-- PDF.js for iOS Files PDF parsing & monochrome high-contrast rendering -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -52,16 +52,16 @@
     [data-theme="warm"] {
       --bg: #f2ece1;
       --surface: #e7dfd1;
-      --fg: #1f1a14;
+      --fg: #1f1b16;
       --muted: #574f45;
       --border: #3a3226;
       --subtle-border: #a69c8e;
     }
 
     [data-theme="dark"] {
-      --bg: #181818;
-      --surface: #222222;
-      --fg: #e4e4e0;
+      --bg: #191919;
+      --surface: #232323;
+      --fg: #dcdcd7;
       --muted: #9e9e98;
       --border: #888888;
       --subtle-border: #4d4d49;
@@ -76,7 +76,7 @@
     }
 
     /* ==========================================================================
-       2. FIXED FULL-VIEWPORT DEVICE FRAME (NO CLIPPING / NO BODY SCROLL)
+       2. FIXED MOBILE VIEWPORT (100dvh + SAFE AREA INSETS)
        ========================================================================== */
     html, body {
       position: fixed;
@@ -107,6 +107,7 @@
 
     #top-bar {
       flex-shrink: 0;
+      min-height: 52px;
       padding-top: max(8px, env(safe-area-inset-top));
       padding-bottom: 8px;
       padding-left: max(10px, env(safe-area-inset-left));
@@ -114,7 +115,6 @@
       border-bottom: 1.5px solid var(--border);
       background-color: var(--bg);
       z-index: 25;
-      transition: transform 0.12s linear;
     }
 
     #reader-stage {
@@ -138,14 +138,15 @@
       z-index: 25;
     }
 
-    /* Focus Mode: hides top & bottom bars cleanly on center tap */
+    /* Distraction-Free Fullscreen Mode */
     #app-shell.focus-mode #top-bar,
-    #app-shell.focus-mode #bottom-bar {
-      display: none;
+    #app-shell.focus-mode #bottom-bar,
+    #app-shell.focus-mode #tts-audio-bar {
+      display: none !important;
     }
 
     /* ==========================================================================
-       3. LARGE TOUCH-FRIENDLY E-INK BUTTONS (MIN 44x44px) & SURFACES
+       3. E-INK PAPER TEXTURE, REFRESH FLASH & 44x44px TOUCH BUTTONS
        ========================================================================== */
     #paper-grain-overlay {
       position: fixed;
@@ -173,7 +174,7 @@
     .eink-border-b { border-bottom: 1.5px solid var(--border); }
     .eink-border-t { border-top: 1.5px solid var(--border); }
     .eink-border-r { border-right: 1.5px solid var(--border); }
-    .eink-subtle-b { border-bottom: 1.5px solid var(--subtle-border); }
+    .eink-subtle-b { border-bottom: 1px solid var(--subtle-border); }
     .eink-subtle-border { border: 1.5px solid var(--subtle-border); }
 
     .eink-surface { background-color: var(--surface); }
@@ -214,7 +215,6 @@
       cursor: not-allowed;
     }
 
-    /* Compact modifier for tight mobile top-bar slots while preserving 44px height */
     .eink-btn-compact {
       min-height: 44px;
       min-width: 44px;
@@ -244,20 +244,20 @@
       font-weight: 700;
       text-align: left;
       line-height: 1.32;
-      margin-top: 0.3em;
+      margin-top: 0.25em;
       margin-bottom: 0.8em;
       padding-bottom: 0.35em;
       border-bottom: 1.5px solid var(--subtle-border);
       break-after: avoid;
     }
 
-    .reader-typography h1 { font-size: 1.36em; }
-    .reader-typography h2 { font-size: 1.2em; }
-    .reader-typography h3 { font-size: 1.06em; }
+    .reader-typography h1 { font-size: 1.35em; }
+    .reader-typography h2 { font-size: 1.18em; }
+    .reader-typography h3 { font-size: 1.05em; }
 
     .reader-typography p {
       margin-top: 0;
-      margin-bottom: 0.88em;
+      margin-bottom: 0.85em;
       text-indent: 1.5em;
     }
 
@@ -360,7 +360,7 @@
     }
 
     /* ==========================================================================
-       5. TTS ACTIVE SENTENCE HIGHLIGHT & TRUE-BLACK OLED BEDTIME OVERLAY
+       5. TTS SENTENCE HIGHLIGHT, AUDIO DRAWER & OLED BLACK SCREEN
        ========================================================================== */
     .tts-active-sentence {
       background-color: var(--surface);
@@ -378,17 +378,13 @@
       z-index: 25;
     }
 
-    #app-shell.focus-mode #tts-audio-bar {
-      display: none !important;
-    }
-
     #bedtime-blackout-overlay {
       position: fixed;
       inset: 0;
       width: 100vw;
       height: 100dvh;
       background-color: #000000 !important;
-      color: #262626;
+      color: #3a3a3a;
       z-index: 10000;
       display: flex;
       flex-direction: column;
@@ -407,7 +403,7 @@
 </head>
 <body data-theme="classic">
 
-  <!-- Matte E-Paper Grain Overlay (3% opacity) -->
+  <!-- Subtle Matte E-Paper Texture Overlay -->
   <svg id="paper-grain-overlay" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
     <filter id="eink-noise">
       <feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="3" stitchTiles="stitch" />
@@ -426,7 +422,7 @@
 
     <!-- 1. TOP TOOLBAR -->
     <header id="top-bar" class="flex items-center justify-between gap-1.5">
-      <!-- Left Group: Library & Table of Contents -->
+      <!-- Left: [Thư viện], [Mục lục] -->
       <div class="flex items-center gap-1.5 shrink-0">
         <button id="btn-library" type="button" class="eink-btn eink-btn-compact" title="Thư viện sách & Kho EPUB">
           <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -449,66 +445,52 @@
         </button>
       </div>
 
-      <!-- Right Group: Direct Text Zoom (A- / Size / A+), Nghe (TTS), Aa Settings, Dấu trang -->
+      <!-- Right: [A-], [A+], [🎧 Nghe], [Aa], [🔖] -->
       <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
-        <!-- PDF Mode Toggle (Visible only when reading PDF) -->
         <button id="btn-pdf-mode-switch" type="button" class="hidden eink-btn eink-btn-compact text-xs" title="Chuyển giữa Dàn chữ E-Ink và Trang PDF gốc">
           Trang gốc
         </button>
 
-        <!-- Direct Text Zoom Controls -->
-        <div class="flex items-center gap-1" role="group" aria-label="Phóng to thu nhỏ chữ">
-          <button id="btn-top-font-dec" type="button" class="eink-btn eink-btn-compact font-bold" title="Thu nhỏ chữ (A-)">
-            A-
-          </button>
-          <span id="top-font-size-badge" class="hidden md:inline-flex items-center justify-center text-xs font-mono font-bold px-1 min-w-[38px] text-center">
-            19px
-          </span>
-          <button id="btn-top-font-inc" type="button" class="eink-btn eink-btn-compact font-bold" title="Phóng to chữ (A+)">
-            A+
-          </button>
-        </div>
+        <button id="btn-top-font-dec" type="button" class="eink-btn eink-btn-compact font-bold" title="Thu nhỏ chữ">
+          A-
+        </button>
 
-        <!-- TTS Audiobook Toggle Button -->
-        <button id="btn-toggle-tts-bar" type="button" class="eink-btn eink-btn-compact" title="Nghe đọc sách (Audiobook & Hẹn giờ ngủ)">
-          <svg class="w-4 h-4 sm:w-5 sm:h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
-            <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
-          </svg>
+        <button id="btn-top-font-inc" type="button" class="eink-btn eink-btn-compact font-bold" title="Phóng to chữ">
+          A+
+        </button>
+
+        <button id="btn-toggle-tts-bar" type="button" class="eink-btn eink-btn-compact" title="Nghe đọc sách & Hẹn giờ ngủ">
+          <span>🎧</span>
           <span class="text-xs sm:text-sm">Nghe</span>
         </button>
 
-        <!-- Aa Typography & Vietnamese Text Repair Settings -->
         <button id="btn-settings" type="button" class="eink-btn eink-btn-compact font-bold" title="Cài đặt hiển thị & Sửa lỗi tiếng Việt">
           Aa
         </button>
 
-        <!-- Top Bookmark Toggle Button -->
-        <button id="btn-top-bookmark" type="button" class="eink-btn eink-btn-compact" title="Đánh dấu trang hiện tại">
+        <button id="btn-top-bookmark" type="button" class="eink-btn eink-btn-compact" title="Đánh dấu trang">
           <svg class="w-4 h-4 sm:w-5 sm:h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
           </svg>
-          <span class="hidden lg:inline">Dấu trang</span>
         </button>
       </div>
     </header>
 
-    <!-- 2. MAIN READING VIEWPORT -->
+    <!-- 2. CENTER READING VIEWPORT -->
     <main id="reader-stage">
-      <!-- Top-right dog-ear visual indicator when current page is bookmarked -->
+      <!-- Top-right dog-ear indicator when current page is bookmarked -->
       <div id="page-dog-ear" class="hidden absolute top-0 right-0 z-10 pointer-events-none">
         <div class="dog-ear-ribbon"></div>
       </div>
 
-      <!-- Subtle Top Book/Chapter Ribbon inside Viewport -->
       <div id="reader-frame" class="h-full w-full max-w-3xl px-5 sm:px-10 pt-2.5 pb-3 flex flex-col justify-between relative">
-        <!-- Mini Running Header -->
+        <!-- Sub-header: Book title on left, Chapter title on right, thin 1px divider -->
         <div class="flex items-center justify-between gap-2 pb-1.5 mb-1.5 eink-subtle-b text-[11px] sm:text-xs eink-muted shrink-0">
           <span id="running-book-title" class="font-semibold truncate max-w-[55%]">Dế Mèn Phiêu Lưu Ký</span>
           <span id="running-chapter-title" class="truncate max-w-[42%] text-right">Chương 1</span>
         </div>
 
-        <!-- Mode 1: Paginated Multi-Column Viewport -->
+        <!-- Mode 1: Paginated Multi-Column Viewport (Exact Line-Height Floor) -->
         <div id="paginated-viewport" class="flex-1 min-h-0 w-full">
           <div id="paginated-columns" class="reader-typography"></div>
         </div>
@@ -527,7 +509,7 @@
           </div>
         </div>
 
-        <!-- Mode 3: PDF Original High-DPR Canvas Viewport -->
+        <!-- Mode 3: PDF Original Monochrome Canvas Viewport -->
         <div id="pdf-canvas-viewport" class="flex-1 min-h-0 w-full relative">
           <div id="pdf-canvas-wrapper" class="py-1 px-1 flex flex-col items-center justify-center min-h-full">
             <canvas id="pdf-canvas"></canvas>
@@ -543,20 +525,62 @@
         <button id="btn-pdf-zoom-fit" type="button" class="eink-btn eink-btn-compact text-xs" title="Vừa chiều ngang">Vừa</button>
       </div>
 
-      <!-- Tap Zones: Left 30% Prev | Center 40% Toggle Focus Mode | Right 30% Next -->
-      <div id="tap-zone-left" class="absolute inset-y-0 left-0 w-[30%] z-10 cursor-pointer" title="Trang trước"></div>
-      <div id="tap-zone-center" class="absolute inset-y-0 left-[30%] w-[40%] z-10 cursor-pointer" title="Chạm giữa để ẩn/hiện thanh công cụ"></div>
-      <div id="tap-zone-right" class="absolute inset-y-0 right-0 w-[30%] z-10 cursor-pointer" title="Trang sau"></div>
+      <!-- Tap Zones: Left 28% Prev | Center 44% Toggle Focus Mode | Right 28% Next -->
+      <div id="tap-zone-left" class="absolute inset-y-0 left-0 w-[28%] z-10 cursor-pointer" title="Trang trước"></div>
+      <div id="tap-zone-center" class="absolute inset-y-0 left-[28%] w-[44%] z-10 cursor-pointer" title="Chạm giữa để ẩn/hiện thanh công cụ"></div>
+      <div id="tap-zone-right" class="absolute inset-y-0 right-0 w-[28%] z-10 cursor-pointer" title="Trang sau"></div>
     </main>
 
-    <!-- 3. BOTTOM NAVIGATION BAR -->
+    <!-- 3. SLIDE-UP AUDIO DRAWER (🎧 Nghe) -->
+    <section id="tts-audio-bar" class="hidden" aria-label="Bảng điều khiển nghe sách">
+      <div class="max-w-3xl mx-auto flex flex-col gap-2">
+        <!-- Row 1: Prev Sentence, Play/Pause, Next Sentence + Status + Close -->
+        <div class="flex items-center justify-between gap-1.5">
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button id="btn-tts-prev" type="button" class="eink-btn eink-btn-compact" title="Câu trước">
+              ⏮
+            </button>
+            <button id="btn-tts-play-pause" type="button" class="eink-btn active" style="min-width: 96px;" title="Phát hoặc Tạm dừng">
+              ▶ Nghe
+            </button>
+            <button id="btn-tts-next" type="button" class="eink-btn eink-btn-compact" title="Câu tiếp theo">
+              ⏭
+            </button>
+          </div>
+
+          <div id="tts-status-text" class="flex-1 min-w-0 text-xs font-medium truncate px-1.5 eink-muted text-right">
+            Sẵn sàng đọc tiếng Việt
+          </div>
+
+          <button id="btn-close-tts-bar" type="button" class="eink-btn eink-btn-compact text-xs shrink-0" title="Đóng thanh nghe">
+            ✕
+          </button>
+        </div>
+
+        <!-- Row 2: Speed, Voice, Sleep Timer, OLED Screen-Off -->
+        <div class="grid grid-cols-4 gap-1.5">
+          <button id="btn-tts-speed" type="button" class="eink-btn eink-btn-compact text-xs font-mono" title="Tốc độ đọc">
+            1.0x
+          </button>
+          <button id="btn-tts-voice" type="button" class="eink-btn eink-btn-compact text-xs truncate" title="Chọn giọng đọc">
+            Giọng đọc
+          </button>
+          <button id="btn-tts-timer" type="button" class="eink-btn eink-btn-compact text-xs font-mono" title="Hẹn giờ tắt">
+            ⏱ Hẹn giờ
+          </button>
+          <button id="btn-tts-screen-off" type="button" class="eink-btn eink-btn-compact text-xs" title="Tắt màn hình đen khi nghe">
+            🌙 Tắt MH
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. BOTTOM FOOTER NAVIGATION BAR -->
     <footer id="bottom-bar" class="flex items-center justify-between gap-2">
-      <!-- Large Prev Page Button -->
       <button id="btn-prev-page" type="button" class="eink-btn shrink-0" style="min-width: 84px;" title="Trang trước">
         ◀ Trước
       </button>
 
-      <!-- Center Page Indicator + Bookmark Quick Button + Live Clock -->
       <div class="flex-1 min-w-0 flex flex-col items-center justify-center text-center leading-tight">
         <div class="text-xs sm:text-sm font-bold tabular-nums truncate max-w-full" id="footer-page-summary">
           Trang 1 / 1 • 0%
@@ -570,61 +594,16 @@
         </div>
       </div>
 
-      <!-- Large Next Page Button -->
       <button id="btn-next-page" type="button" class="eink-btn shrink-0" style="min-width: 84px;" title="Trang sau">
         Sau ▶
       </button>
     </footer>
-
-    <!-- 4. DEDICATED E-INK AUDIOBOOK & SLEEP TIMER BAR (SHOWN WHEN [Nghe] IS ACTIVE) -->
-    <section id="tts-audio-bar" class="hidden" aria-label="Bảng điều khiển nghe sách">
-      <div class="max-w-3xl mx-auto flex flex-col gap-2">
-        <!-- Row 1: Transport Controls (Prev Sentence, Play/Pause, Next Sentence) + Status -->
-        <div class="flex items-center justify-between gap-1.5">
-          <div class="flex items-center gap-1.5 shrink-0">
-            <button id="btn-tts-prev" type="button" class="eink-btn eink-btn-compact" title="Câu trước / Trang trước">
-              ⏮
-            </button>
-            <button id="btn-tts-play-pause" type="button" class="eink-btn active" style="min-width: 98px;" title="Phát hoặc Tạm dừng">
-              ▶ Nghe
-            </button>
-            <button id="btn-tts-next" type="button" class="eink-btn eink-btn-compact" title="Câu tiếp theo">
-              ⏭
-            </button>
-          </div>
-
-          <div id="tts-status-text" class="flex-1 min-w-0 text-xs font-medium truncate px-1.5 eink-muted text-right">
-            Sẵn sàng đọc tiếng Việt
-          </div>
-
-          <button id="btn-close-tts-bar" type="button" class="eink-btn eink-btn-compact text-xs shrink-0" title="Đóng thanh nghe sách">
-            ✕
-          </button>
-        </div>
-
-        <!-- Row 2: Speed, Voice Picker, Sleep Timer, True-Black Screen-Off -->
-        <div class="grid grid-cols-4 gap-1.5">
-          <button id="btn-tts-speed" type="button" class="eink-btn eink-btn-compact text-xs font-mono" title="Tốc độ đọc">
-            1.0x
-          </button>
-          <button id="btn-tts-voice" type="button" class="eink-btn eink-btn-compact text-xs truncate" title="Chọn giọng đọc hệ thống">
-            Giọng đọc
-          </button>
-          <button id="btn-tts-timer" type="button" class="eink-btn eink-btn-compact text-xs font-mono" title="Hẹn giờ tắt khi ngủ">
-            ⏱ Hẹn giờ
-          </button>
-          <button id="btn-tts-screen-off" type="button" class="eink-btn eink-btn-compact text-xs" title="Tắt màn hình đen OLED khi nghe ngủ">
-            🌙 Tắt MH
-          </button>
-        </div>
-      </div>
-    </section>
   </div>
 
   <!-- ========================================================================
-       TRUE-BLACK OLED BEDTIME SCREEN-OFF OVERLAY (#000000)
+       OLED TRUE-BLACK SCREEN-OFF OVERLAY (#000000)
        ======================================================================== -->
-  <div id="bedtime-blackout-overlay" class="hidden" role="dialog" aria-label="Chế độ tắt màn hình nghe sách ban đêm">
+  <div id="bedtime-blackout-overlay" class="hidden" role="dialog" aria-label="Chế độ tắt màn hình ban đêm">
     <div class="text-center space-y-1">
       <div id="blackout-book-title" class="text-xs font-semibold tracking-wide truncate max-w-[85vw]">
         Đang phát sách nói...
@@ -636,15 +615,171 @@
 
     <div class="text-center space-y-3 px-4">
       <div id="blackout-timer-status" class="text-sm font-mono font-semibold">
-        Chế độ tắt màn hình ban đêm
+        Đang phát âm thanh
       </div>
       <div class="text-xs tracking-wide">
-        Chạm đúp 2 lần vào màn hình để bật lại
+        Đang phát âm thanh • Chạm đúp 2 lần để bật màn hình
       </div>
     </div>
 
     <div class="text-[11px] font-mono">
-      OLED Black • Audio Active
+      OLED Black • E-Ink Audio
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       NON-INTRUSIVE E-INK STATUS TOAST
+       ======================================================================== -->
+  <div id="toast-box" class="hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-50 eink-bg eink-border rounded-lg px-4 py-2 text-xs sm:text-sm font-semibold text-center max-w-[90vw]"></div>
+
+  <!-- ========================================================================
+       MODAL 1: DISPLAY SETTINGS & VIETNAMESE TEXT FIXER (Aa)
+       ======================================================================== -->
+  <div id="modal-settings" class="hidden fixed inset-0 z-40 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/30">
+    <div class="eink-bg eink-border rounded-xl w-full max-w-lg p-4 sm:p-5 max-h-[88dvh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 mb-4 eink-border-b">
+        <h3 class="text-base font-bold uppercase tracking-wide">Hiển thị & Sửa lỗi chữ</h3>
+        <button type="button" data-close="modal-settings" class="eink-btn">Đóng ✕</button>
+      </div>
+
+      <!-- PDF View Mode Switcher (Shown only for PDF books) -->
+      <div id="pdf-settings-section" class="hidden mb-4 p-3 eink-surface eink-border rounded-lg">
+        <label class="block text-xs font-bold uppercase tracking-wide mb-2">Chế độ đọc tệp PDF</label>
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" data-set-pdf-mode="reflow" class="pdf-mode-opt eink-btn">
+            Dàn lại chữ E-Ink
+          </button>
+          <button type="button" data-set-pdf-mode="canvas" class="pdf-mode-opt eink-btn">
+            Trang PDF gốc
+          </button>
+        </div>
+      </div>
+
+      <!-- Vietnamese Split-Syllable Fixer -->
+      <div class="mb-4 p-3 eink-surface eink-border rounded-lg space-y-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <div class="text-sm font-bold">Tự động ghép dấu Tiếng Việt</div>
+            <div class="text-xs eink-muted">Sửa lỗi tách chữ khi mở PDF (vd: "đ ổ i" → "đổi")</div>
+          </div>
+          <button type="button" id="btn-toggle-vn-repair" class="eink-btn shrink-0">
+            Đang bật
+          </button>
+        </div>
+        <button type="button" id="btn-repair-current-book" class="eink-btn w-full text-xs sm:text-sm">
+          Sửa lỗi tách chữ Tiếng Việt cho sách đang đọc
+        </button>
+      </div>
+
+      <!-- 1. Paper Theme -->
+      <div class="mb-4">
+        <label class="block text-xs font-bold uppercase tracking-wide mb-2 eink-muted">Màu nền giấy E-Ink</label>
+        <div class="grid grid-cols-3 gap-2">
+          <button type="button" data-set-theme="classic" class="theme-opt eink-btn flex-col py-2 h-auto">
+            <span class="w-5 h-5 rounded-full border border-black inline-block" style="background:#e5e4df;"></span>
+            <span class="text-xs">Mặc định</span>
+          </button>
+          <button type="button" data-set-theme="warm" class="theme-opt eink-btn flex-col py-2 h-auto">
+            <span class="w-5 h-5 rounded-full border border-black inline-block" style="background:#f2ece1;"></span>
+            <span class="text-xs">Giấy vàng ấm</span>
+          </button>
+          <button type="button" data-set-theme="dark" class="theme-opt eink-btn flex-col py-2 h-auto">
+            <span class="w-5 h-5 rounded-full border border-neutral-400 inline-block" style="background:#191919;"></span>
+            <span class="text-xs">Chế độ tối</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Font Family -->
+      <div class="mb-4">
+        <label class="block text-xs font-bold uppercase tracking-wide mb-2 eink-muted">Phông chữ</label>
+        <div class="grid grid-cols-3 gap-2">
+          <button type="button" data-set-font="serif" class="font-opt eink-btn" style="font-family: 'Lora', serif;">
+            Có chân
+          </button>
+          <button type="button" data-set-font="sans" class="font-opt eink-btn" style="font-family: 'Inter', sans-serif;">
+            Không chân
+          </button>
+          <button type="button" data-set-font="mono" class="font-opt eink-btn" style="font-family: 'JetBrains Mono', monospace;">
+            Đơn cách
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. Font Size -->
+      <div class="mb-4">
+        <div class="flex items-center justify-between mb-1.5">
+          <label class="text-xs font-bold uppercase tracking-wide eink-muted">Cỡ chữ</label>
+          <span id="val-font-size" class="text-sm font-mono font-bold">19px</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <button type="button" id="btn-font-dec" class="eink-btn font-bold">A−</button>
+          <input id="slider-font-size" type="range" min="14" max="32" step="1" value="19" class="eink-slider" />
+          <button type="button" id="btn-font-inc" class="eink-btn font-bold">A+</button>
+        </div>
+      </div>
+
+      <!-- 4. Line Height -->
+      <div class="mb-4">
+        <div class="flex items-center justify-between mb-1.5">
+          <label class="text-xs font-bold uppercase tracking-wide eink-muted">Giãn dòng</label>
+          <span id="val-line-height" class="text-sm font-mono font-bold">1.7</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <button type="button" id="btn-lh-dec" class="eink-btn font-bold">−</button>
+          <input id="slider-line-height" type="range" min="1.4" max="2.0" step="0.1" value="1.7" class="eink-slider" />
+          <button type="button" id="btn-lh-inc" class="eink-btn font-bold">+</button>
+        </div>
+      </div>
+
+      <!-- 5. Reading Mode & Alignment -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wide mb-1.5 eink-muted">Chế độ đọc</label>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button type="button" data-set-mode="paginated" class="mode-opt eink-btn text-xs">Lật trang</button>
+            <button type="button" data-set-mode="scroll" class="mode-opt eink-btn text-xs">Cuộn dọc</button>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wide mb-1.5 eink-muted">Căn lề</label>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button type="button" data-set-align="justify" class="align-opt eink-btn text-xs">Căn đều</button>
+            <button type="button" data-set-align="left" class="align-opt eink-btn text-xs">Căn trái</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Column Width -->
+      <div class="mb-4">
+        <label class="block text-xs font-bold uppercase tracking-wide mb-1.5 eink-muted">Khổ rộng trang</label>
+        <div class="grid grid-cols-3 gap-2">
+          <button type="button" data-set-width="narrow" class="width-opt eink-btn text-xs">Hẹp</button>
+          <button type="button" data-set-width="medium" class="width-opt eink-btn text-xs">Vừa</button>
+          <button type="button" data-set-width="wide" class="width-opt eink-btn text-xs">Rộng</button>
+        </div>
+      </div>
+
+      <!-- 7. E-Ink Refresh Toggle & Manual Refresh -->
+      <div class="pt-3 eink-border-t flex items-center justify-between gap-2">
+        <div>
+          <div class="text-sm font-bold">Chớp làm tươi E-Ink</div>
+          <div class="text-xs eink-muted">Khử bóng mờ sau mỗi 6 lần lật trang</div>
+        </div>
+        <button type="button" id="btn-toggle-eink-refresh" class="eink-btn shrink-0">
+          Đang bật
+        </button>
+      </div>
+
+      <div class="pt-3 mt-3 eink-border-t flex items-center justify-between gap-2">
+        <div>
+          <div class="text-sm font-bold">Làm tươi toàn màn hình ngay</div>
+          <div class="text-xs eink-muted">Xóa vệt mực mờ trên màn hình</div>
+        </div>
+        <button type="button" id="btn-manual-refresh" class="eink-btn shrink-0">
+          Làm tươi
+        </button>
+      </div>
     </div>
   </div>
 
@@ -677,18 +812,15 @@
   </div>
 
   <!-- ========================================================================
-       MODAL 3: FULL-SCREEN LIBRARY, FREE EPUB SOURCES & PWA EXPORT
+       MODAL 3: LIBRARY, FREE EPUB SOURCES & PWA / INDEX.HTML EXPORT
        ======================================================================== -->
   <div id="modal-library" class="hidden fixed inset-0 z-40 flex flex-col eink-bg">
-    <!-- Library Header -->
     <div class="px-3.5 py-2.5 eink-border-b flex items-center justify-between gap-2 shrink-0" style="padding-top: max(10px, env(safe-area-inset-top));">
-      <div>
-        <h2 class="text-base sm:text-lg font-bold">Thư viện & Kho Sách E-Ink</h2>
-      </div>
+      <h2 class="text-base sm:text-lg font-bold">Thư viện & Kho Sách E-Ink</h2>
       <button type="button" data-close="modal-library" class="eink-btn">Đóng ✕</button>
     </div>
 
-    <!-- 3 Large Navigation Tabs -->
+    <!-- 3 Navigation Tabs -->
     <div class="px-3 py-2.5 eink-surface eink-border-b grid grid-cols-3 gap-2 shrink-0">
       <button type="button" id="lib-tab-books" class="lib-tab-btn eink-btn active text-xs sm:text-sm">
         Sách của tôi
@@ -701,9 +833,8 @@
       </button>
     </div>
 
-    <!-- TAB 1: SÁCH CỦA TÔI (MY BOOKS & IMPORT) -->
+    <!-- TAB 1: SÁCH CỦA TÔI -->
     <div id="lib-panel-books" class="flex-1 min-h-0 flex flex-col overflow-hidden">
-      <!-- Primary Import Actions -->
       <div class="p-3 sm:p-4 eink-subtle-b flex flex-wrap items-center gap-2.5 shrink-0">
         <label class="eink-btn active flex-1 sm:flex-initial cursor-pointer text-sm">
           <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -716,10 +847,6 @@
         </label>
 
         <button type="button" id="btn-open-paste" class="eink-btn text-sm">
-          <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-            <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-          </svg>
           <span>Dán văn bản</span>
         </button>
       </div>
@@ -727,7 +854,7 @@
       <!-- PDF Processing Progress Bar -->
       <div id="pdf-import-progress" class="hidden px-4 py-3 eink-surface eink-border-b shrink-0">
         <div class="flex items-center justify-between text-xs sm:text-sm font-bold mb-1.5">
-          <span id="pdf-progress-text">Đang xử lý tệp PDF & sửa lỗi tiếng Việt...</span>
+          <span id="pdf-progress-text">Đang xử lý tệp PDF & ghép dấu tiếng Việt...</span>
           <span id="pdf-progress-pct" class="font-mono">0%</span>
         </div>
         <div class="w-full h-2.5 eink-bg eink-border rounded overflow-hidden">
@@ -735,78 +862,63 @@
         </div>
       </div>
 
-      <!-- Saved Books & Preloaded Classics Grid -->
       <div id="library-books-list" class="p-3 sm:p-5 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 flex-1"></div>
     </div>
 
-    <!-- TAB 2: KHO EPUB MIỄN PHÍ (CURATED FREE EPUB SOURCES) -->
+    <!-- TAB 2: KHO SÁCH EPUB MIỄN PHÍ -->
     <div id="lib-panel-sources" class="hidden flex-1 min-h-0 overflow-y-auto p-3 sm:p-5">
       <div class="max-w-3xl mx-auto space-y-4 pb-8">
-        <!-- 3-Step Visual Guide for Downloading EPUB on iPhone Safari -->
         <div class="eink-surface eink-border rounded-xl p-4">
-          <h3 class="text-sm sm:text-base font-bold mb-2.5">Cách tải sách EPUB miễn phí về đọc trên iPhone:</h3>
+          <h3 class="text-sm sm:text-base font-bold mb-2.5">Hướng dẫn tải sách EPUB miễn phí về iPhone:</h3>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs sm:text-sm">
             <div class="eink-bg eink-subtle-border rounded-lg p-3">
-              <div class="font-bold mb-1">Bước 1: Chọn nguồn sách</div>
-              <p class="eink-muted">Chạm vào một trong các thư viện bên dưới để mở trên Safari và tìm tựa sách yêu thích.</p>
+              <div class="font-bold mb-1">1. Mở thư viện sách</div>
+              <p class="eink-muted">Chạm nút <strong>Mở kho sách</strong> ở bất kỳ nguồn nào bên dưới để tìm tựa sách yêu thích.</p>
             </div>
             <div class="eink-bg eink-subtle-border rounded-lg p-3">
-              <div class="font-bold mb-1">Bước 2: Tải tệp .EPUB</div>
-              <p class="eink-muted">Nhấn tải định dạng <strong>.EPUB</strong> → chọn <strong>Tải về (Download)</strong>. Tệp sẽ lưu trong ứng dụng <strong>Tệp (Files)</strong>.</p>
+              <div class="font-bold mb-1">2. Tải tệp .EPUB</div>
+              <p class="eink-muted">Chọn tải định dạng <strong>.EPUB</strong> → <strong>Tải về (Download)</strong> vào ứng dụng <strong>Tệp (Files)</strong>.</p>
             </div>
             <div class="eink-bg eink-subtle-border rounded-lg p-3">
-              <div class="font-bold mb-1">Bước 3: Mở đọc E-Ink</div>
+              <div class="font-bold mb-1">3. Mở đọc E-Ink</div>
               <p class="eink-muted">Quay lại tab <strong>Sách của tôi</strong> → nhấn <strong>Mở tệp EPUB / PDF</strong> và chọn tệp vừa tải.</p>
             </div>
           </div>
         </div>
 
-        <!-- Category Filter Pills -->
         <div class="flex items-center gap-2 flex-wrap">
           <span class="text-xs font-bold uppercase eink-muted mr-1">Lọc nguồn:</span>
-          <button type="button" data-source-filter="all" class="source-filter-btn eink-btn active">
-            Tất cả (7)
-          </button>
-          <button type="button" data-source-filter="vi" class="source-filter-btn eink-btn">
-            Tiếng Việt (4)
-          </button>
-          <button type="button" data-source-filter="intl" class="source-filter-btn eink-btn">
-            Quốc tế (3)
-          </button>
+          <button type="button" data-source-filter="all" class="source-filter-btn eink-btn active">Tất cả (6)</button>
+          <button type="button" data-source-filter="vi" class="source-filter-btn eink-btn">Tiếng Việt (4)</button>
+          <button type="button" data-source-filter="intl" class="source-filter-btn eink-btn">Quốc tế (2)</button>
         </div>
 
-        <!-- Curated EPUB Directory List -->
         <div id="epub-sources-list" class="space-y-3"></div>
       </div>
     </div>
 
-    <!-- TAB 3: CÀI ĐẶT IPHONE & TẢI FILE INDEX.HTML -->
+    <!-- TAB 3: CÀI RA IPHONE & TẢI FILE INDEX.HTML -->
     <div id="lib-panel-pwa" class="hidden flex-1 min-h-0 overflow-y-auto p-3 sm:p-5">
       <div class="max-w-2xl mx-auto space-y-4 pb-8">
         <div class="eink-surface eink-border rounded-xl p-4 sm:p-5">
           <h3 class="text-base font-bold mb-2">1. Lưu ứng dụng ra Màn hình chính iPhone</h3>
           <ol class="list-decimal list-inside space-y-2 text-xs sm:text-sm leading-relaxed">
             <li>Mở địa chỉ trang web GitHub Pages của bạn bằng trình duyệt <strong>Safari</strong> trên iPhone.</li>
-      <!-- 7. E-Ink Refresh Toggle -->
-      <div class="pt-3 eink-border-t flex items-center justify-between gap-2">
-        <div>
-          <div class="text-sm font-bold">Chớp làm tươi E-Ink</div>
-          <div class="text-xs eink-muted">Khử bóng mờ sau mỗi 6 lần lật trang</div>
+            <li>Chạm vào biểu tượng <strong>Chia sẻ (Share)</strong> (ô vuông có mũi tên hướng lên ở cạnh dưới màn hình).</li>
+            <li>Cuộn xuống và chọn <strong>Thêm vào MH chính (Add to Home Screen)</strong> → nhấn <strong>Thêm (Add)</strong>.</li>
+            <li>Mở ứng dụng từ màn hình chính để đọc toàn màn hình không thanh địa chỉ.</li>
+          </ol>
         </div>
-        <button type="button" id="btn-toggle-eink-refresh" class="eink-btn shrink-0">
-          Đang bật
-        </button>
-      </div>
 
-      <!-- 8. Manual E-Ink Screen Refresh Action -->
-      <div class="pt-3 mt-3 eink-border-t flex items-center justify-between gap-2">
-        <div>
-          <div class="text-sm font-bold">Làm tươi toàn màn hình ngay</div>
-          <div class="text-xs eink-muted">Xóa vệt mực mờ trên màn hình</div>
+        <div class="eink-bg eink-border rounded-xl p-4 sm:p-5 space-y-3">
+          <h3 class="text-base font-bold">2. Tải tệp index.html hoàn chỉnh để up lên GitHub Pages</h3>
+          <p class="text-xs sm:text-sm eink-muted leading-relaxed">
+            Nhấn nút bên dưới để tải trực tiếp tệp <code>index.html</code> đầy đủ của phiên bản này về iPhone, sau đó tải lên kho chứa GitHub của bạn (chọn <strong>Add file → Upload files → Commit changes</strong>).
+          </p>
+          <button type="button" id="btn-download-html" class="eink-btn active w-full sm:w-auto">
+            Tải file index.html
+          </button>
         </div>
-        <button type="button" id="btn-manual-refresh" class="eink-btn shrink-0">
-          Làm tươi
-        </button>
       </div>
     </div>
   </div>
@@ -832,7 +944,7 @@
           </div>
         </div>
         <div>
-          <label class="block text-xs font-bold mb-1">Nội dung văn bản (Tự động sửa lỗi tách chữ tiếng Việt nếu đang bật)</label>
+          <label class="block text-xs font-bold mb-1">Nội dung văn bản</label>
           <textarea id="paste-content" rows="8" placeholder="Dán nội dung truyện, bài báo hoặc tài liệu vào đây..." class="w-full eink-bg eink-border rounded-lg p-3 text-sm leading-relaxed outline-none font-serif"></textarea>
         </div>
       </div>
@@ -857,10 +969,10 @@
       <div class="mb-5">
         <div class="flex items-center justify-between mb-2">
           <label class="text-xs font-bold uppercase tracking-wide eink-muted">Hẹn giờ tắt khi nghe ngủ</label>
-          <span id="modal-timer-live" class="text-xs font-mono font-bold">Đang tắt</span>
+          <span id="modal-timer-live" class="text-xs font-mono font-bold">Tắt</span>
         </div>
         <div class="grid grid-cols-3 gap-2">
-          <button type="button" data-sleep-preset="off" class="sleep-preset-btn eink-btn text-xs">Tắt hẹn giờ</button>
+          <button type="button" data-sleep-preset="off" class="sleep-preset-btn eink-btn text-xs">Tắt</button>
           <button type="button" data-sleep-preset="10" class="sleep-preset-btn eink-btn text-xs">10 phút</button>
           <button type="button" data-sleep-preset="15" class="sleep-preset-btn eink-btn text-xs">15 phút</button>
           <button type="button" data-sleep-preset="30" class="sleep-preset-btn eink-btn text-xs">30 phút</button>
@@ -868,20 +980,18 @@
           <button type="button" data-sleep-preset="60" class="sleep-preset-btn eink-btn text-xs">60 phút</button>
         </div>
         <button type="button" data-sleep-preset="chapter" class="sleep-preset-btn eink-btn w-full mt-2 text-xs">
-          Hết chương hiện tại thì dừng
+          Hết chương này
         </button>
       </div>
 
       <!-- Playback Speed Presets -->
       <div class="mb-5">
         <label class="block text-xs font-bold uppercase tracking-wide mb-2 eink-muted">Tốc độ đọc</label>
-        <div class="grid grid-cols-3 gap-2">
-          <button type="button" data-tts-rate="0.7" class="tts-rate-btn eink-btn text-xs font-mono">0.7x</button>
-          <button type="button" data-tts-rate="0.85" class="tts-rate-btn eink-btn text-xs font-mono">0.85x</button>
-          <button type="button" data-tts-rate="1.0" class="tts-rate-btn eink-btn text-xs font-mono">1.0x Chuẩn</button>
-          <button type="button" data-tts-rate="1.15" class="tts-rate-btn eink-btn text-xs font-mono">1.15x</button>
-          <button type="button" data-tts-rate="1.3" class="tts-rate-btn eink-btn text-xs font-mono">1.3x</button>
-          <button type="button" data-tts-rate="1.5" class="tts-rate-btn eink-btn text-xs font-mono">1.5x</button>
+        <div class="grid grid-cols-4 gap-2">
+          <button type="button" data-tts-rate="0.8" class="tts-rate-btn eink-btn text-xs font-mono">0.8x</button>
+          <button type="button" data-tts-rate="1.0" class="tts-rate-btn eink-btn text-xs font-mono">1.0x</button>
+          <button type="button" data-tts-rate="1.2" class="tts-rate-btn eink-btn text-xs font-mono">1.2x</button>
+          <button type="button" data-tts-rate="1.4" class="tts-rate-btn eink-btn text-xs font-mono">1.4x</button>
         </div>
       </div>
 
@@ -893,16 +1003,21 @@
         </div>
         <div id="tts-voices-list" class="space-y-1.5 max-h-48 overflow-y-auto pr-1"></div>
         <p class="text-[11px] eink-muted mt-2 leading-relaxed">
-          Mẹo iPhone: Vào <strong>Cài đặt → Trợ năng → Nội dung được đọc → Giọng nói → Tiếng Việt</strong> để tải thêm giọng Linh hoặc An chất lượng cao.
+          Mẹo iPhone: Vào <strong>Cài đặt → Trợ năng → Nội dung được đọc → Giọng nói → Tiếng Việt</strong> để tải thêm giọng Linh hoặc An.
         </p>
       </div>
     </div>
   </div>
 
   <!-- ========================================================================
-       COMPLETE APPLICATION SCRIPT
+       ROCK-SOLID SELF-CONTAINED APPLICATION SCRIPT
        ======================================================================== -->
   <script>
+    window.onerror = function (msg, url, line, col, err) {
+      console.warn('E-Ink Reader handled runtime warning:', msg, line, col, err);
+      return true;
+    };
+
     (function () {
       'use strict';
 
@@ -912,7 +1027,6 @@
       const VN_ACCENTED_VOWELS = 'àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵ';
       const VN_ALL_VOWELS = 'aăâeêioôơuưy' + VN_ACCENTED_VOWELS;
 
-      // Builds Unicode-safe regexes for Vietnamese syllables
       const RE_COMBINING_MARKS = /\s+([\u0300-\u036f])/g;
       const RE_D_STROKE_VOWEL = new RegExp(
         `(^|[\\s(\\[{"'“‘«—–-])(đ|Đ)\\s+([${VN_ALL_VOWELS}${VN_ALL_VOWELS.toUpperCase()}]+)`,
@@ -933,31 +1047,17 @@
 
       function fixVietnameseText(str) {
         if (!str || typeof str !== 'string') return str || '';
-
-        // 1. Normalize Unicode to NFC & attach stray combining diacritics
         let out = str.normalize('NFC').replace(RE_COMBINING_MARKS, '$1');
 
-        // 2. Multi-pass syllable reconstruction for broken PDF diacritic spacing
-        // e.g. "bao gi ờ thay đ ổ i, ăn nói m ạ ch l ạ c, ph ẩ m h ạ nh toàn v ẹ n, làm m ọ i ng ườ i ph ả i chú ý"
         for (let pass = 0; pass < 3; pass++) {
           const prev = out;
-
-          // Merge "đ ặ t" -> "đặt", "đ ế n" -> "đến", "đ ẹ p" -> "đẹp", "đ ô" -> "đô"
           out = out.replace(RE_D_STROKE_VOWEL, '$1$2$3');
-
-          // Merge split vowel clusters like "ng ườ i" -> "người", "t ươ ng" -> "tương"
           out = out.replace(RE_SPLIT_VOWEL_CLUSTER, '$1$2$3');
-
-          // Merge onset + accented vowel: "gi ờ" -> "giờ", "m ạ" -> "mạ", "ph ẩ" -> "phẩ"
           out = out.replace(RE_ONSET_ACCENTED_VOWEL, '$1$2$3');
-
-          // Merge accented vowel nucleus + coda/glide: "mạ ch" -> "mạch", "đổ i" -> "đổi", "Lượ ng" -> "Lượng"
           out = out.replace(RE_ACCENTED_SYLLABLE_CODA, '$1$2$3');
-
           if (out === prev) break;
         }
 
-        // 3. Clean up whitespace & punctuation spacing
         out = out
           .replace(/[ \t]{2,}/g, ' ')
           .replace(/\s+([,.;:!?%\]\)}”’»])/g, '$1')
@@ -995,7 +1095,7 @@
       }
 
       /* ----------------------------------------------------------------------
-         2. CURATED FREE EPUB BOOK SOURCES (KHO SÁCH EPUB MIỄN PHÍ)
+         2. CURATED FREE EPUB BOOK SOURCES
          ---------------------------------------------------------------------- */
       const FREE_EPUB_SOURCES = [
         {
@@ -1004,7 +1104,7 @@
           url: 'https://tusachnho.com',
           category: 'vi',
           badge: 'Tiếng Việt',
-          description: 'Kho sách văn học, kỹ năng, lịch sử định dạng EPUB/MOBI miễn phí, giao diện gọn nhẹ dễ tải trực tiếp trên điện thoại.'
+          description: 'Kho sách văn học, kỹ năng, lịch sử định dạng EPUB/MOBI miễn phí, giao diện gọn nhẹ dễ tải trực tiếp trên iPhone.'
         },
         {
           id: 'vnthuquan',
@@ -1020,11 +1120,11 @@
           url: 'https://ebookvie.com',
           category: 'vi',
           badge: 'Tiếng Việt',
-          description: 'Tuyển tập sách EPUB/PDF tiếng Việt đa dạng thể loại từ văn học, triết học đến khoa học và phát triển bản thân.'
+          description: 'Tuyển tập sách EPUB/PDF tiếng Việt đa dạng từ văn học, triết học đến khoa học và phát triển bản thân.'
         },
         {
           id: 'wikisource-vi',
-          name: 'Dự án Số hóa Sách Việt (Wikisource Tiếng Việt)',
+          name: 'Wikisource Tiếng Việt',
           url: 'https://vi.wikisource.org',
           category: 'vi',
           badge: 'Tiếng Việt',
@@ -1036,7 +1136,7 @@
           url: 'https://www.gutenberg.org',
           category: 'intl',
           badge: 'Quốc tế',
-          description: 'Hơn 70.000 đầu sách EPUB miễn phí bản quyền (cả tiếng Anh, Pháp và một số tác phẩm tiếng Việt).'
+          description: 'Hơn 70.000 đầu sách EPUB miễn phí bản quyền (tiếng Anh, Pháp và nhiều tác phẩm kinh điển thế giới).'
         },
         {
           id: 'standardebooks',
@@ -1045,19 +1145,11 @@
           category: 'intl',
           badge: 'Quốc tế',
           description: 'Sách kinh điển thế giới định dạng EPUB chuẩn mực, trình bày đẹp như sách in chuyên nghiệp.'
-        },
-        {
-          id: 'openlibrary',
-          name: 'Open Library (Internet Archive)',
-          url: 'https://openlibrary.org',
-          category: 'intl',
-          badge: 'Quốc tế',
-          description: 'Thư viện số mở phi lợi nhuận với hàng triệu đầu sách cho phép tải EPUB hoặc mượn đọc trực tuyến.'
         }
       ];
 
       /* ----------------------------------------------------------------------
-         3. BUILT-IN VIETNAMESE CLASSICS (4 SAMPLE BOOKS)
+         3. BUILT-IN MULTI-CHAPTER VIETNAMESE SAMPLE BOOKS
          ---------------------------------------------------------------------- */
       const BUILTIN_BOOKS = [
         {
@@ -1116,55 +1208,13 @@
               `
             }
           ]
-        },
-        {
-          id: 'builtin-chi-pheo',
-          title: 'Chí Phèo',
-          author: 'Nam Cao',
-          format: 'sách mẫu',
-          builtin: true,
-          chapters: [
-            {
-              title: 'Phần 1: Tiếng chửi đầu làng Vũ Đại',
-              html: `
-                <h1>Phần 1: Tiếng chửi đầu làng Vũ Đại</h1>
-                <p>Hắn vừa đi vừa chửi. Bao giờ cũng thế, cứ rượu xong là hắn chửi. Bắt đầu hắn chửi trời. Có hề gì? Trời có của riêng nhà nào? Rồi hắn chửi đời. Thế cũng chẳng sao: đời là tất cả nhưng chẳng là ai. Tức mình, hắn chửi ngay tất cả làng Vũ Đại. Nhưng cả làng Vũ Đại ai cũng nhủ: "Chắc nó trừ mình ra!"</p>
-                <p>Không ai lên tiếng cả. Tức thật! Ồ! Thế này thì tức thật! Tức chết đi được mất! Đã thế, hắn phải chửi cha đứa nào không chửi nhau với hắn. Nhưng cũng không ai ra điều. Mẹ kiếp! Thế có phí rượu không? Thế thì có khổ hắn không? Không biết đứa chết mẹ nào lại đẻ ra thân hắn cho hắn khổ đến nông nỗi này?</p>
-              `
-            },
-            {
-              title: 'Phần 2: Bát cháo hành của Thị Nở',
-              html: `
-                <h1>Phần 2: Bát cháo hành của Thị Nở</h1>
-                <p>Hắn mở mắt. Trời sáng đã lâu. Mặt trời chắc đã lên cao, và nắng bên ngoài chắc là rực rỡ. Cứ nghe tiếng chim ríu rít bên ngoài đủ biết. Nhưng trong cái lều ẩm thấp vẫn mới chỉ hơi lờ mờ. Ở đây người ta thấy chiều lúc xế trưa và gặp đêm khi bên ngoài vẫn sáng.</p>
-                <p>Hắn thấy lòng thành trẻ con. Hắn muốn làm nũng với thị như với mẹ. Ôi sao mà hắn hiền, ai dám bảo đó là cái thằng Chí Phèo vẫn đập đầu, rạch mặt mà đâm chém người? Đó là cái bản tính của hắn, ngày thường bị lấp đi. Hay trận ốm thay đổi hẳn về sinh lý, cũng thay đổi cả tâm lý nữa?</p>
-              `
-            }
-          ]
-        },
-        {
-          id: 'builtin-so-do',
-          title: 'Số Đỏ (Trích đoạn)',
-          author: 'Vũ Trọng Phụng',
-          format: 'sách mẫu',
-          builtin: true,
-          chapters: [
-            {
-              title: 'Chương 1: Xuân Tóc Đỏ và tiệm may Âu Hóa',
-              html: `
-                <h1>Chương 1: Xuân Tóc Đỏ và tiệm may Âu Hóa</h1>
-                <p>Sân quần vợt Bắc Kỳ hôm ấy đông nghịt những bậc thượng lưu trí thức của Hà thành. Trên khán đài, các cụ cố, các bà phó đoan, các ông văn minh đều ăn mặc theo lối tân thời rực rỡ nhất của tiệm may Âu Hóa.</p>
-                <p>Xuân Tóc Đỏ đứng khoanh tay đầy vẻ tự tin của một bậc vĩ nhân vừa bước chân vào giới thượng lưu. Từ một kẻ nhặt bóng thuê nơi sân quần, nhờ những câu nói bâng quơ mà thiên hạ lại suy tôn thành nhà cải cách xã hội, giáo sư quần vợt và bậc hiền triết của thời đại mới.</p>
-              `
-            }
-          ]
         }
       ];
 
       /* ----------------------------------------------------------------------
-         4. APPLICATION STATE & INDEXEDDB + LOCALSTORAGE PERSISTENCE
+         4. SINGLE CLEAN STATE OBJECT & PERSISTENCE (IDB + LOCALSTORAGE)
          ---------------------------------------------------------------------- */
-      const STORAGE_KEY = 'eink_reader_state_v4';
+      const STORAGE_KEY = 'eink_reader_state_v5';
       const IDB_NAME = 'EInkReaderDB';
       const IDB_VERSION = 1;
       const STORE_BOOKS = 'books';
@@ -1188,8 +1238,8 @@
         books: [...BUILTIN_BOOKS],
         currentBookId: BUILTIN_BOOKS[0].id,
         settings: { ...DEFAULT_SETTINGS },
-        progress: {},   // { [bookId]: { chapterIndex, pageIndex, pageRatio, scrollRatio, pdfMode, pdfPage, ttsSentenceIndex, updatedAt } }
-        bookmarks: {}   // { [bookId]: Array<{ id, chapterIndex, pageIndex, pdfPage?, label, snippet }> }
+        progress: {},
+        bookmarks: {}
       };
 
       const ttsState = {
@@ -1197,7 +1247,7 @@
         isPlaying: false,
         isPaused: false,
         voices: [],
-        sentences: [],        // Array<{ text, blockIndex, startOffset, endOffset }>
+        sentences: [],
         sentenceIndex: 0,
         currentUtterance: null,
         sleepMode: 'off',     // 'off' | 'minutes' | 'chapter'
@@ -1206,14 +1256,6 @@
         silentAudioEl: null,
         silentAudioCtx: null,
         blackoutActive: false
-      };
-
-      const state = {
-        books: [...BUILTIN_BOOKS],
-        currentBookId: BUILTIN_BOOKS[0].id,
-        settings: { ...DEFAULT_SETTINGS },
-        progress: {},   // { [bookId]: { chapterIndex, pageIndex, scrollRatio, pdfMode, pdfPage } }
-        bookmarks: {}   // { [bookId]: Array<{ id, chapterIndex, pageIndex, pdfPage?, label, snippet }> }
       };
 
       const pagination = {
@@ -1230,6 +1272,96 @@
       let pdfRenderTask = null;
       let currentSourceFilter = 'all';
 
+      /* ----------------------------------------------------------------------
+         5. DOM ELEMENT REFERENCES & UTILITY HELPERS
+         ---------------------------------------------------------------------- */
+      const el = {
+        appShell: document.getElementById('app-shell'),
+        readerFrame: document.getElementById('reader-frame'),
+        runningBookTitle: document.getElementById('running-book-title'),
+        runningChapterTitle: document.getElementById('running-chapter-title'),
+        paginatedViewport: document.getElementById('paginated-viewport'),
+        paginatedColumns: document.getElementById('paginated-columns'),
+        scrollViewport: document.getElementById('scroll-viewport'),
+        scrollContent: document.getElementById('scroll-content'),
+        scrollChapLabel: document.getElementById('scroll-chap-label'),
+        pdfCanvasViewport: document.getElementById('pdf-canvas-viewport'),
+        pdfCanvas: document.getElementById('pdf-canvas'),
+        pdfZoomControls: document.getElementById('pdf-zoom-controls'),
+        pdfZoomLabel: document.getElementById('pdf-zoom-label'),
+        btnPdfModeSwitch: document.getElementById('btn-pdf-mode-switch'),
+        pdfSettingsSection: document.getElementById('pdf-settings-section'),
+        footerPageSummary: document.getElementById('footer-page-summary'),
+        footerClock: document.getElementById('footer-clock'),
+        btnBookmarkInline: document.getElementById('btn-bookmark-inline'),
+        pageDogEar: document.getElementById('page-dog-ear'),
+        refreshFlash: document.getElementById('eink-refresh-flash'),
+        toastBox: document.getElementById('toast-box'),
+        tapLeft: document.getElementById('tap-zone-left'),
+        tapCenter: document.getElementById('tap-zone-center'),
+        tapRight: document.getElementById('tap-zone-right')
+      };
+
+      function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      let toastTimer = null;
+      function showToast(msg) {
+        if (!el.toastBox) return;
+        el.toastBox.textContent = msg;
+        el.toastBox.classList.remove('hidden');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          el.toastBox.classList.add('hidden');
+        }, 2400);
+      }
+
+      function updateClock() {
+        if (!el.footerClock) return;
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        el.footerClock.textContent = `${hh}:${mm}`;
+      }
+
+      function getCurrentBook() {
+        return state.books.find(b => b.id === state.currentBookId) || state.books[0];
+      }
+
+      function getBookProgress(bookId) {
+        const book = state.books.find(b => b.id === bookId);
+        if (!state.progress[bookId]) {
+          state.progress[bookId] = {
+            chapterIndex: 0,
+            pageIndex: 0,
+            pageRatio: 0,
+            scrollRatio: 0,
+            pdfMode: book && book.isScannedPdf ? 'canvas' : 'reflow',
+            pdfPage: 1,
+            ttsSentenceIndex: 0,
+            updatedAt: 0
+          };
+        }
+        return state.progress[bookId];
+      }
+
+      function isPdfCanvasActive() {
+        const book = getCurrentBook();
+        if (!book || book.format !== 'pdf') return false;
+        const prog = getBookProgress(book.id);
+        return prog.pdfMode === 'canvas';
+      }
+
+      /* ----------------------------------------------------------------------
+         6. DEFENSIVE STORAGE & PWA ICON / MANIFEST SETUP
+         ---------------------------------------------------------------------- */
       function configurePdfWorker() {
         try {
           if (typeof window.pdfjsLib !== 'undefined' && window.pdfjsLib.GlobalWorkerOptions) {
@@ -1237,29 +1369,95 @@
               'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
           }
         } catch (err) {
-          console.warn('PDF.js worker deferred:', err);
+          console.warn('PDF.js worker note:', err);
         }
       }
 
-      // IndexedDB Helpers
+      function setupIosPwaManifestAndIcons() {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = 180;
+          canvas.height = 180;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+
+          ctx.fillStyle = '#e5e4df';
+          ctx.fillRect(0, 0, 180, 180);
+          ctx.strokeStyle = '#141414';
+          ctx.lineWidth = 8;
+          ctx.strokeRect(12, 12, 156, 156);
+
+          ctx.fillStyle = '#141414';
+          ctx.font = 'bold 58px Georgia, serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('E-Ink', 90, 82);
+
+          ctx.font = '600 18px sans-serif';
+          ctx.fillText('READER', 90, 132);
+
+          const iconUrl = canvas.toDataURL('image/png');
+          const iconLink = document.getElementById('apple-touch-icon-link');
+          if (iconLink) iconLink.href = iconUrl;
+
+          const manifestObj = {
+            name: 'E-Ink Reader',
+            short_name: 'E-Ink Reader',
+            start_url: '.',
+            display: 'standalone',
+            background_color: '#e5e4df',
+            theme_color: '#e5e4df',
+            icons: [{ src: iconUrl, sizes: '180x180', type: 'image/png' }]
+          };
+          const blob = new Blob([JSON.stringify(manifestObj)], { type: 'application/manifest+json' });
+          const manifestLink = document.getElementById('pwa-manifest-link');
+          if (manifestLink) manifestLink.href = URL.createObjectURL(blob);
+        } catch (err) {
+          console.warn('PWA icon/manifest setup note:', err);
+        }
+      }
+
+      function downloadCleanIndexHtml() {
+        try {
+          const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+          const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'index.html';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          showToast('Đã tải tệp index.html về máy');
+        } catch (err) {
+          console.warn('Download HTML error:', err);
+          showToast('Không thể tải tệp tự động trên trình duyệt này');
+        }
+      }
+
       function openDatabase() {
         return new Promise((resolve, reject) => {
-          if (!('indexedDB' in window)) {
-            reject(new Error('IndexedDB unavailable'));
-            return;
+          try {
+            if (!('indexedDB' in window)) {
+              reject(new Error('IndexedDB unavailable'));
+              return;
+            }
+            const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+            req.onupgradeneeded = (e) => {
+              const db = e.target.result;
+              if (!db.objectStoreNames.contains(STORE_BOOKS)) {
+                db.createObjectStore(STORE_BOOKS, { keyPath: 'id' });
+              }
+              if (!db.objectStoreNames.contains(STORE_PDF_BLOBS)) {
+                db.createObjectStore(STORE_PDF_BLOBS);
+              }
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+          } catch (err) {
+            reject(err);
           }
-          const req = indexedDB.open(IDB_NAME, IDB_VERSION);
-          req.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains(STORE_BOOKS)) {
-              db.createObjectStore(STORE_BOOKS, { keyPath: 'id' });
-            }
-            if (!db.objectStoreNames.contains(STORE_PDF_BLOBS)) {
-              db.createObjectStore(STORE_PDF_BLOBS);
-            }
-          };
-          req.onsuccess = () => resolve(req.result);
-          req.onerror = () => reject(req.error);
         });
       }
 
@@ -1340,7 +1538,7 @@
         }
       }
 
-      async function loadState() {
+      function loadSyncLocalStorage() {
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
           if (raw) {
@@ -1353,7 +1551,9 @@
         } catch (err) {
           console.warn('localStorage load warning:', err);
         }
+      }
 
+      async function loadAsyncLibraryBooks() {
         const customBooks = await idbGetAllBooks();
         customBooks.sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
         state.books = [...customBooks, ...BUILTIN_BOOKS];
@@ -1374,27 +1574,244 @@
         prog.chapterIndex = Math.min(Math.max(0, prog.chapterIndex || 0), book.chapters.length - 1);
         prog.pageIndex = pagination.currentPage;
         prog.pageRatio = ratio;
-        prog.totalPagesSnapshot = pagination.totalPages;
         prog.updatedAt = Date.now();
         Object.assign(prog, extraFields);
         saveState();
       }
-      function getBookProgress(bookId) {
-        const book = state.books.find(b => b.id === bookId);
-        if (!state.progress[bookId]) {
-          state.progress[bookId] = {
-            chapterIndex: 0,
-            pageIndex: 0,
-            pageRatio: 0,
-            scrollRatio: 0,
-            pdfMode: book && book.isScannedPdf ? 'canvas' : 'reflow',
-            pdfPage: 1,
-            ttsSentenceIndex: 0,
-            updatedAt: 0
-          };
-        }
-        return state.progress[bookId];
+
+      /* ----------------------------------------------------------------------
+         7. E-INK VISUAL REFRESH & THEME / TYPOGRAPHY APPLICATION
+         ---------------------------------------------------------------------- */
+      function triggerEInkRefresh(force = false) {
+        if (!force && !state.settings.einkRefresh) return;
+        el.refreshFlash.classList.add('flashing');
+        setTimeout(() => {
+          el.refreshFlash.classList.remove('flashing');
+        }, 120);
       }
+
+      function handlePageTurnRefresh() {
+        pagination.pageTurnCounter += 1;
+        if (pagination.pageTurnCounter >= 6) {
+          pagination.pageTurnCounter = 0;
+          triggerEInkRefresh(false);
+        }
+      }
+
+      function applySettingsToDOM() {
+        const s = state.settings;
+        document.body.setAttribute('data-theme', s.theme);
+
+        const themeMeta = document.querySelector('meta[name="theme-color"]');
+        if (themeMeta) {
+          themeMeta.setAttribute(
+            'content',
+            s.theme === 'warm' ? '#f2ece1' : s.theme === 'dark' ? '#191919' : '#e5e4df'
+          );
+        }
+
+        const fontMap = {
+          serif: "'Lora', Georgia, serif",
+          sans: "'Inter', system-ui, -apple-system, sans-serif",
+          mono: "'JetBrains Mono', monospace"
+        };
+        document.documentElement.style.setProperty('--reader-font', fontMap[s.font] || fontMap.serif);
+        document.documentElement.style.setProperty('--reader-size', `${s.fontSize}px`);
+        document.documentElement.style.setProperty('--reader-line-height', String(s.lineHeight));
+        document.documentElement.style.setProperty('--reader-align', s.align);
+
+        const widthMap = {
+          narrow: 'max-w-xl',
+          medium: 'max-w-3xl',
+          wide: 'max-w-5xl'
+        };
+        el.readerFrame.classList.remove('max-w-xl', 'max-w-3xl', 'max-w-5xl');
+        el.readerFrame.classList.add(widthMap[s.width] || 'max-w-3xl');
+
+        // Sync Settings UI Controls
+        document.querySelectorAll('.theme-opt').forEach(b => b.classList.toggle('active', b.dataset.setTheme === s.theme));
+        document.querySelectorAll('.font-opt').forEach(b => b.classList.toggle('active', b.dataset.setFont === s.font));
+        document.querySelectorAll('.width-opt').forEach(b => b.classList.toggle('active', b.dataset.setWidth === s.width));
+        document.querySelectorAll('.align-opt').forEach(b => b.classList.toggle('active', b.dataset.setAlign === s.align));
+        document.querySelectorAll('.mode-opt').forEach(b => b.classList.toggle('active', b.dataset.setMode === s.mode));
+
+        const valFontSize = document.getElementById('val-font-size');
+        const sliderFontSize = document.getElementById('slider-font-size');
+        const valLineHeight = document.getElementById('val-line-height');
+        const sliderLineHeight = document.getElementById('slider-line-height');
+        const btnRefresh = document.getElementById('btn-toggle-eink-refresh');
+        const btnVnRepair = document.getElementById('btn-toggle-vn-repair');
+
+        if (valFontSize) valFontSize.textContent = `${s.fontSize}px`;
+        if (sliderFontSize) sliderFontSize.value = String(s.fontSize);
+        if (valLineHeight) valLineHeight.textContent = String(s.lineHeight);
+        if (sliderLineHeight) sliderLineHeight.value = String(s.lineHeight);
+        if (btnRefresh) {
+          btnRefresh.textContent = s.einkRefresh ? 'Đang bật' : 'Đã tắt';
+          btnRefresh.classList.toggle('active', s.einkRefresh);
+        }
+        if (btnVnRepair) {
+          btnVnRepair.textContent = s.autoRepairVietnamese ? 'Đang bật' : 'Đã tắt';
+          btnVnRepair.classList.toggle('active', s.autoRepairVietnamese);
+        }
+      }
+
+      /* ----------------------------------------------------------------------
+         8. EXACT LINE-HEIGHT PAGINATION & PDF CANVAS RENDERER
+         ---------------------------------------------------------------------- */
+      function updatePdfToolbarControls() {
+        const book = getCurrentBook();
+        const isPdf = book && book.format === 'pdf';
+        el.btnPdfModeSwitch.classList.toggle('hidden', !isPdf);
+        el.pdfSettingsSection.classList.toggle('hidden', !isPdf);
+
+        if (isPdf) {
+          const prog = getBookProgress(book.id);
+          const inCanvas = prog.pdfMode === 'canvas';
+          el.btnPdfModeSwitch.textContent = inCanvas ? 'Dàn chữ' : 'Trang gốc';
+          el.btnPdfModeSwitch.classList.toggle('active', inCanvas);
+          document.querySelectorAll('.pdf-mode-opt').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.setPdfMode === prog.pdfMode);
+          });
+        }
+      }
+
+      async function renderCurrentPdfCanvasPage(countTurn = false) {
+        const book = getCurrentBook();
+        if (!book || book.format !== 'pdf') return;
+        const prog = getBookProgress(book.id);
+        const targetPageNum = Math.min(Math.max(1, prog.pdfPage || 1), book.pdfTotalPages || 1);
+        prog.pdfPage = targetPageNum;
+
+        el.runningBookTitle.textContent = book.title;
+        el.runningChapterTitle.textContent = `Trang ${targetPageNum} / ${book.pdfTotalPages || 1}`;
+        el.pdfZoomLabel.textContent = `${Math.round(pdfZoomScale * 100)}%`;
+
+        if (countTurn) handlePageTurnRefresh();
+        updateStatusBar();
+        updateBookmarkIndicator();
+        persistReadingPosition();
+
+        try {
+          if (typeof window.pdfjsLib === 'undefined') {
+            showToast('Cần kết nối mạng để tải PDF.js hiển thị trang gốc.');
+            return;
+          }
+          configurePdfWorker();
+
+          if (!activePdfDoc || activePdfBookId !== book.id) {
+            const blobBuffer = await idbGetPdfBlob(book.id);
+            if (!blobBuffer) {
+              showToast('Không tìm thấy dữ liệu trang PDF gốc.');
+              return;
+            }
+            const loadingTask = window.pdfjsLib.getDocument({ data: blobBuffer.slice(0) });
+            activePdfDoc = await loadingTask.promise;
+            activePdfBookId = book.id;
+          }
+
+          if (pdfRenderTask) {
+            try { pdfRenderTask.cancel(); } catch (_) {}
+          }
+
+          const page = await activePdfDoc.getPage(targetPageNum);
+          const unscaledViewport = page.getViewport({ scale: 1.0 });
+          const availWidth = Math.max(260, el.pdfCanvasViewport.clientWidth - 16);
+          const fitScale = availWidth / unscaledViewport.width;
+          const finalScale = fitScale * pdfZoomScale;
+
+          const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+          const renderViewport = page.getViewport({ scale: finalScale * dpr });
+          const cssViewport = page.getViewport({ scale: finalScale });
+
+          const canvas = el.pdfCanvas;
+          const ctx = canvas.getContext('2d');
+          canvas.width = Math.floor(renderViewport.width);
+          canvas.height = Math.floor(renderViewport.height);
+          canvas.style.width = `${Math.floor(cssViewport.width)}px`;
+          canvas.style.height = `${Math.floor(cssViewport.height)}px`;
+          canvas.classList.add('visible-canvas');
+
+          pdfRenderTask = page.render({ canvasContext: ctx, viewport: renderViewport });
+          await pdfRenderTask.promise;
+        } catch (err) {
+          if (err && err.name !== 'RenderingCancelledException') {
+            console.warn('PDF render error:', err);
+          }
+        }
+      }
+
+      function recalculatePagination(preserveProgressRatio = null) {
+        const book = getCurrentBook();
+        if (!book) return;
+        const prog = getBookProgress(book.id);
+        updatePdfToolbarControls();
+
+        // Hide all 3 viewports first
+        el.paginatedViewport.classList.add('hidden');
+        el.scrollViewport.classList.add('hidden');
+        el.pdfCanvasViewport.classList.remove('active-pdf-view');
+        el.pdfZoomControls.classList.add('hidden');
+
+        // Case A: PDF Original Canvas Mode
+        if (isPdfCanvasActive()) {
+          el.pdfCanvasViewport.classList.add('active-pdf-view');
+          el.pdfZoomControls.classList.remove('hidden');
+          pagination.currentPage = Math.max(0, (prog.pdfPage || 1) - 1);
+          pagination.totalPages = book.pdfTotalPages || 1;
+          renderCurrentPdfCanvasPage(false);
+          return;
+        }
+
+        // Ensure valid chapter index
+        prog.chapterIndex = Math.min(Math.max(0, prog.chapterIndex || 0), book.chapters.length - 1);
+        const chapter = book.chapters[prog.chapterIndex];
+
+        el.runningBookTitle.textContent = book.title;
+        el.runningChapterTitle.textContent = chapter.title;
+
+        // Case B: Vertical Scroll Mode
+        if (state.settings.mode === 'scroll') {
+          el.scrollViewport.classList.remove('hidden');
+          el.scrollContent.innerHTML = chapter.html;
+          el.scrollChapLabel.textContent = `Chương ${prog.chapterIndex + 1} / ${book.chapters.length}`;
+
+          requestAnimationFrame(() => {
+            const maxScroll = Math.max(0, el.scrollViewport.scrollHeight - el.scrollViewport.clientHeight);
+            el.scrollViewport.scrollTop = Math.round((prog.scrollRatio || 0) * maxScroll);
+            updateStatusBar();
+            updateBookmarkIndicator();
+          });
+          return;
+        }
+
+        // Case C: Crisp Paginated Mode with exact line-height floor calculation
+        el.paginatedViewport.classList.remove('hidden');
+        el.paginatedColumns.innerHTML = chapter.html;
+
+        const containerRect = el.paginatedViewport.getBoundingClientRect();
+        const colWidth = Math.max(240, Math.floor(containerRect.width));
+        const rawHeight = Math.max(200, Math.floor(containerRect.height));
+
+        const lineHeightPx = state.settings.fontSize * state.settings.lineHeight;
+        const wholeLines = Math.max(5, Math.floor(rawHeight / lineHeightPx));
+        const snappedHeight = Math.floor(wholeLines * lineHeightPx);
+
+        pagination.columnWidth = colWidth;
+        pagination.columnGap = 48;
+
+        el.paginatedColumns.style.height = `${snappedHeight}px`;
+        el.paginatedColumns.style.width = `${colWidth}px`;
+        el.paginatedColumns.style.columnWidth = `${colWidth}px`;
+        el.paginatedColumns.style.columnGap = `${pagination.columnGap}px`;
+        el.paginatedColumns.style.transform = 'translateX(0px)';
+
+        // Force layout recalculation to measure exact scrollWidth
+        const totalScrollWidth = el.paginatedColumns.scrollWidth;
+        const stride = colWidth + pagination.columnGap;
+        const totalPages = Math.max(1, Math.round((totalScrollWidth + pagination.columnGap) / stride));
+        pagination.totalPages = totalPages;
+
         let targetPage = prog.pageIndex || 0;
         if (preserveProgressRatio !== null) {
           targetPage = Math.round(preserveProgressRatio * (totalPages - 1));
@@ -1505,7 +1922,7 @@
       }
 
       /* ----------------------------------------------------------------------
-         11. BOOKMARKS & TABLE OF CONTENTS
+         9. BOOKMARKS & TABLE OF CONTENTS
          ---------------------------------------------------------------------- */
       function getBookBookmarks(bookId) {
         if (!state.bookmarks[bookId]) state.bookmarks[bookId] = [];
@@ -1532,8 +1949,10 @@
           topBmBtn.classList.toggle('active', active);
         }
 
-        const count = getBookBookmarks(getCurrentBook().id).length;
-        document.getElementById('bookmark-count').textContent = count;
+        const countEl = document.getElementById('bookmark-count');
+        if (countEl) {
+          countEl.textContent = getBookBookmarks(getCurrentBook().id).length;
+        }
       }
 
       function toggleBookmark() {
@@ -1665,7 +2084,7 @@
       }
 
       /* ----------------------------------------------------------------------
-         12. LIBRARY, FREE EPUB SOURCES & PARSERS (.PDF, .EPUB, .TXT)
+         10. LIBRARY, FREE EPUB SOURCES & PARSERS (.PDF, .EPUB, .TXT, .MD)
          ---------------------------------------------------------------------- */
       function renderFreeEpubSources(filter = currentSourceFilter) {
         currentSourceFilter = filter;
@@ -1674,6 +2093,7 @@
         });
 
         const container = document.getElementById('epub-sources-list');
+        if (!container) return;
         container.innerHTML = '';
 
         const filtered = FREE_EPUB_SOURCES.filter(src => filter === 'all' || src.category === filter);
@@ -1706,6 +2126,7 @@
 
       function renderLibrary() {
         const listEl = document.getElementById('library-books-list');
+        if (!listEl) return;
         listEl.innerHTML = '';
 
         state.books.forEach(book => {
@@ -1843,7 +2264,7 @@
 
       async function parseEpubFile(arrayBuffer, fileName) {
         if (typeof window.JSZip === 'undefined') {
-          throw new Error('Thư viện JSZip chưa tải được (cần kết nối mạng lần đầu).');
+          throw new Error('Thư viện JSZip chưa sẵn sàng (cần kết nối mạng lần đầu).');
         }
 
         const zip = await window.JSZip.loadAsync(arrayBuffer);
@@ -1934,7 +2355,7 @@
 
       async function parsePdfFile(arrayBuffer, fileName) {
         if (typeof window.pdfjsLib === 'undefined') {
-          throw new Error('Thư viện PDF.js chưa tải được (vui lòng mở khi có mạng).');
+          throw new Error('Thư viện PDF.js chưa sẵn sàng (vui lòng mở khi có mạng).');
         }
         configurePdfWorker();
 
@@ -2002,7 +2423,6 @@
                 }
                 currentLine = str;
               } else {
-                // Only insert a space when horizontal gap exceeds 30% of fontSize (avoids splitting Vietnamese diacritics)
                 let needsSpace = false;
                 if (currentLine && str && !currentLine.endsWith(' ') && !str.startsWith(' ')) {
                   if (lastEndX !== null && tx !== null) {
@@ -2016,11 +2436,7 @@
               }
 
               lastY = ty;
-              if (tx !== null) {
-                lastEndX = tx + itemWidth;
-              } else {
-                lastEndX = null;
-              }
+              lastEndX = tx !== null ? tx + itemWidth : null;
             }
 
             if (currentLine.trim()) {
@@ -2031,7 +2447,6 @@
 
             const pagePlain = paragraphs.join(' ');
             totalExtractedChars += pagePlain.replace(/\s+/g, '').length;
-
             extractedPages.push({ pageNum, paragraphs });
 
             if (pageNum % 10 === 0) {
@@ -2147,18 +2562,17 @@
             showToast(`Đã mở "${newBook.title}"`);
           }
         } catch (err) {
-          console.error(err);
+          console.warn(err);
           showToast(err.message || 'Không thể đọc tệp này.');
         }
       }
 
       /* ----------------------------------------------------------------------
-         13. TEXT-TO-SPEECH (AUDIOBOOK), SLEEP TIMER & OLED BLACKOUT ENGINE
+         11. TEXT-TO-SPEECH (NGHE SÁCH), SLEEP TIMER & OLED BLACK SCREEN
          ---------------------------------------------------------------------- */
-      const TTS_SPEED_STEPS = [0.7, 0.85, 1.0, 1.15, 1.3, 1.5];
+      const TTS_SPEED_STEPS = [0.8, 1.0, 1.2, 1.4];
 
       function createSilentWavDataUri() {
-        // 1-second 8kHz mono 8-bit silent WAV to keep iOS Safari audio session active
         const sampleRate = 8000;
         const numSamples = sampleRate;
         const buffer = new ArrayBuffer(44 + numSamples);
@@ -2221,9 +2635,7 @@
 
       function stopBackgroundAudioHeartbeat() {
         try {
-          if (ttsState.silentAudioEl) {
-            ttsState.silentAudioEl.pause();
-          }
+          if (ttsState.silentAudioEl) ttsState.silentAudioEl.pause();
           if (ttsState.silentAudioCtx && ttsState.silentAudioCtx.state === 'running') {
             ttsState.silentAudioCtx.suspend().catch(() => {});
           }
@@ -2231,8 +2643,8 @@
       }
 
       function updateMediaSessionMetadata() {
-        if (!('mediaSession' in navigator)) return;
         try {
+          if (!('mediaSession' in navigator)) return;
           const book = getCurrentBook();
           const prog = getBookProgress(book.id);
           const chap = book.chapters[prog.chapterIndex] || { title: 'Chương 1' };
@@ -2247,31 +2659,36 @@
           navigator.mediaSession.setActionHandler('pause', () => pauseTtsPlayback());
           navigator.mediaSession.setActionHandler('previoustrack', () => skipTtsSentence(-1));
           navigator.mediaSession.setActionHandler('nexttrack', () => skipTtsSentence(1));
-        } catch (_) {}
+        } catch (err) {
+          console.warn('MediaSession note:', err);
+        }
       }
 
       function loadSystemVoices() {
-        if (!('speechSynthesis' in window)) return;
-        const rawVoices = window.speechSynthesis.getVoices() || [];
-        // Sort Vietnamese voices first, prioritizing Linh / An / Google Vietnamese
-        const sorted = [...rawVoices].sort((a, b) => {
-          const aVi = (a.lang || '').toLowerCase().startsWith('vi') ? 0 : 1;
-          const bVi = (b.lang || '').toLowerCase().startsWith('vi') ? 0 : 1;
-          if (aVi !== bVi) return aVi - bVi;
-          const aPref = /linh|an|vietnam/i.test(a.name) ? 0 : 1;
-          const bPref = /linh|an|vietnam/i.test(b.name) ? 0 : 1;
-          return aPref - bPref;
-        });
+        try {
+          if (!('speechSynthesis' in window)) return;
+          const rawVoices = window.speechSynthesis.getVoices() || [];
+          const sorted = [...rawVoices].sort((a, b) => {
+            const aVi = (a.lang || '').toLowerCase().startsWith('vi') ? 0 : 1;
+            const bVi = (b.lang || '').toLowerCase().startsWith('vi') ? 0 : 1;
+            if (aVi !== bVi) return aVi - bVi;
+            const aPref = /linh|an|vietnam/i.test(a.name) ? 0 : 1;
+            const bPref = /linh|an|vietnam/i.test(b.name) ? 0 : 1;
+            return aPref - bPref;
+          });
 
-        ttsState.voices = sorted;
-        if (!state.settings.ttsVoiceURI && sorted.length > 0) {
-          const defaultVi = sorted.find(v => (v.lang || '').toLowerCase().startsWith('vi'));
-          if (defaultVi) {
-            state.settings.ttsVoiceURI = defaultVi.voiceURI;
+          ttsState.voices = sorted;
+          if (!state.settings.ttsVoiceURI && sorted.length > 0) {
+            const defaultVi = sorted.find(v => (v.lang || '').toLowerCase().startsWith('vi'));
+            if (defaultVi) {
+              state.settings.ttsVoiceURI = defaultVi.voiceURI;
+            }
           }
+          updateTtsBarUI();
+          renderTtsVoicesList();
+        } catch (err) {
+          console.warn('Voice enumeration note:', err);
         }
-        updateTtsBarUI();
-        renderTtsVoicesList();
       }
 
       function getSelectedVoice() {
@@ -2288,7 +2705,6 @@
         if (!text) return [];
         const cleaned = text.replace(/\s+/g, ' ').trim();
         if (!cleaned) return [];
-        // Split on sentence-ending punctuation while keeping punctuation attached
         const parts = cleaned.match(/[^.!?…;]+[.!?…;]*\s*/g) || [cleaned];
         return parts.map(s => s.trim()).filter(s => s.length > 0);
       }
@@ -2313,7 +2729,6 @@
         const sentences = [];
 
         if (isPdfCanvasActive()) {
-          // Use extracted text for the current PDF page
           const pdfPageNum = prog.pdfPage || 1;
           const matchingChap = book.chapters.find(c => c.pdfStartPage === pdfPageNum) ||
             book.chapters[Math.floor((pdfPageNum - 1) / 10)] ||
@@ -2342,7 +2757,6 @@
             });
           });
         } else {
-          // Paginated mode: collect only sentences whose bounding box lies inside the current visible page column
           const vpRect = el.paginatedViewport.getBoundingClientRect();
           const blocks = Array.from(el.paginatedColumns.querySelectorAll('h1, h2, h3, p, blockquote, li'));
           blocks.forEach(blockEl => {
@@ -2354,7 +2768,6 @@
             });
           });
 
-          // Fallback if a single long paragraph spans across page boundaries
           if (sentences.length === 0) {
             const plain = el.paginatedColumns.textContent || '';
             splitTextIntoNaturalSentences(plain).forEach(txt => {
@@ -2399,73 +2812,77 @@
       }
 
       function speakCurrentSentence() {
-        if (!('speechSynthesis' in window)) {
-          showToast('Trình duyệt không hỗ trợ đọc văn bản thành tiếng.');
-          return;
-        }
+        try {
+          if (!('speechSynthesis' in window)) {
+            showToast('Trình duyệt không hỗ trợ đọc văn bản thành tiếng.');
+            return;
+          }
 
-        window.speechSynthesis.cancel();
+          window.speechSynthesis.cancel();
 
-        if (!ttsState.sentences.length) {
-          buildSentencesForCurrentView(true);
-        }
+          if (!ttsState.sentences.length) {
+            buildSentencesForCurrentView(true);
+          }
 
-        if (ttsState.sentenceIndex >= ttsState.sentences.length) {
-          advanceTtsToNextPageOrChapter();
-          return;
-        }
-
-        const sentenceObj = ttsState.sentences[ttsState.sentenceIndex];
-        if (!sentenceObj || !sentenceObj.text) {
-          ttsState.sentenceIndex += 1;
-          speakCurrentSentence();
-          return;
-        }
-
-        highlightActiveSentence(sentenceObj);
-        persistReadingPosition({ ttsSentenceIndex: ttsState.sentenceIndex });
-
-        const utter = new SpeechSynthesisUtterance(sentenceObj.text);
-        const voice = getSelectedVoice();
-        if (voice) {
-          utter.voice = voice;
-          utter.lang = voice.lang || 'vi-VN';
-        } else {
-          utter.lang = 'vi-VN';
-        }
-        utter.rate = state.settings.ttsRate || 1.0;
-
-        utter.onstart = () => {
-          ttsState.isPlaying = true;
-          ttsState.isPaused = false;
-          updateTtsBarUI();
-          updateMediaSessionMetadata();
-          updateBlackoutOverlayInfo();
-        };
-
-        utter.onend = () => {
-          if (!ttsState.isPlaying || ttsState.isPaused) return;
-          ttsState.sentenceIndex += 1;
-          if (ttsState.sentenceIndex < ttsState.sentences.length) {
-            speakCurrentSentence();
-          } else {
+          if (ttsState.sentenceIndex >= ttsState.sentences.length) {
             advanceTtsToNextPageOrChapter();
+            return;
           }
-        };
 
-        utter.onerror = (ev) => {
-          if (ev && (ev.error === 'interrupted' || ev.error === 'canceled')) return;
-          console.warn('TTS utterance warning:', ev);
-          if (ttsState.isPlaying && !ttsState.isPaused) {
+          const sentenceObj = ttsState.sentences[ttsState.sentenceIndex];
+          if (!sentenceObj || !sentenceObj.text) {
             ttsState.sentenceIndex += 1;
-            setTimeout(() => {
-              if (ttsState.isPlaying) speakCurrentSentence();
-            }, 120);
+            speakCurrentSentence();
+            return;
           }
-        };
 
-        ttsState.currentUtterance = utter;
-        window.speechSynthesis.speak(utter);
+          highlightActiveSentence(sentenceObj);
+          persistReadingPosition({ ttsSentenceIndex: ttsState.sentenceIndex });
+
+          const utter = new SpeechSynthesisUtterance(sentenceObj.text);
+          const voice = getSelectedVoice();
+          if (voice) {
+            utter.voice = voice;
+            utter.lang = voice.lang || 'vi-VN';
+          } else {
+            utter.lang = 'vi-VN';
+          }
+          utter.rate = state.settings.ttsRate || 1.0;
+
+          utter.onstart = () => {
+            ttsState.isPlaying = true;
+            ttsState.isPaused = false;
+            updateTtsBarUI();
+            updateMediaSessionMetadata();
+            updateBlackoutOverlayInfo();
+          };
+
+          utter.onend = () => {
+            if (!ttsState.isPlaying || ttsState.isPaused) return;
+            ttsState.sentenceIndex += 1;
+            if (ttsState.sentenceIndex < ttsState.sentences.length) {
+              speakCurrentSentence();
+            } else {
+              advanceTtsToNextPageOrChapter();
+            }
+          };
+
+          utter.onerror = (ev) => {
+            if (ev && (ev.error === 'interrupted' || ev.error === 'canceled')) return;
+            if (ttsState.isPlaying && !ttsState.isPaused) {
+              ttsState.sentenceIndex += 1;
+              setTimeout(() => {
+                if (ttsState.isPlaying) speakCurrentSentence();
+              }, 120);
+            }
+          };
+
+          ttsState.currentUtterance = utter;
+          window.speechSynthesis.speak(utter);
+        } catch (err) {
+          console.warn('TTS speak warning:', err);
+          showToast('Không thể khởi chạy giọng đọc trên thiết bị.');
+        }
       }
 
       function advanceTtsToNextPageOrChapter() {
@@ -2494,7 +2911,6 @@
           return;
         }
 
-        // End of current chapter reached
         if (ttsState.sleepMode === 'chapter') {
           clearSleepTimer();
           stopTtsPlayback(true);
@@ -2520,31 +2936,35 @@
       }
 
       function startOrResumeTts() {
-        if (!('speechSynthesis' in window)) {
-          showToast('Thiết bị không hỗ trợ đọc giọng nói.');
-          return;
-        }
-        startBackgroundAudioHeartbeat();
-        ttsState.isPlaying = true;
-        ttsState.isPaused = false;
+        try {
+          if (!('speechSynthesis' in window)) {
+            showToast('Thiết bị không hỗ trợ đọc giọng nói.');
+            return;
+          }
+          startBackgroundAudioHeartbeat();
+          ttsState.isPlaying = true;
+          ttsState.isPaused = false;
 
-        if (window.speechSynthesis.paused && window.speechSynthesis.speaking) {
-          window.speechSynthesis.resume();
-          updateTtsBarUI();
-          updateMediaSessionMetadata();
-          return;
-        }
+          if (window.speechSynthesis.paused && window.speechSynthesis.speaking) {
+            window.speechSynthesis.resume();
+            updateTtsBarUI();
+            updateMediaSessionMetadata();
+            return;
+          }
 
-        buildSentencesForCurrentView(ttsState.sentences.length === 0);
-        speakCurrentSentence();
+          buildSentencesForCurrentView(ttsState.sentences.length === 0);
+          speakCurrentSentence();
+        } catch (err) {
+          console.warn('TTS resume warning:', err);
+        }
       }
 
       function pauseTtsPlayback() {
         ttsState.isPlaying = false;
         ttsState.isPaused = true;
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-        }
+        try {
+          if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        } catch (_) {}
         stopBackgroundAudioHeartbeat();
         persistReadingPosition({ ttsSentenceIndex: ttsState.sentenceIndex });
         updateTtsBarUI();
@@ -2554,9 +2974,9 @@
       function stopTtsPlayback(resetSentence = false) {
         ttsState.isPlaying = false;
         ttsState.isPaused = false;
-        if ('speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-        }
+        try {
+          if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        } catch (_) {}
         stopBackgroundAudioHeartbeat();
         clearTtsSentenceHighlight();
         if (resetSentence) {
@@ -2592,7 +3012,7 @@
       }
 
       /* ----------------------------------------------------------------------
-         14. SLEEP TIMER & OLED SCREEN-OFF OVERLAY CONTROLS
+         12. SLEEP TIMER & OLED BLACK SCREEN CONTROLS
          ---------------------------------------------------------------------- */
       function formatCountdown(ms) {
         const totalSec = Math.max(0, Math.ceil(ms / 1000));
@@ -2653,7 +3073,7 @@
         const modalLive = document.getElementById('modal-timer-live');
 
         let label = '⏱ Hẹn giờ';
-        let statusText = 'Đang tắt';
+        let statusText = 'Tắt';
 
         if (ttsState.sleepMode === 'minutes') {
           const rem = formatCountdown(ttsState.sleepEndTime - Date.now());
@@ -2661,7 +3081,7 @@
           statusText = `Còn ${rem}`;
         } else if (ttsState.sleepMode === 'chapter') {
           label = '⏱ Hết chương';
-          statusText = 'Dừng khi hết chương';
+          statusText = 'Hết chương này';
         }
 
         if (timerBtn) {
@@ -2672,14 +3092,10 @@
 
         document.querySelectorAll('.sleep-preset-btn').forEach(btn => {
           const p = btn.dataset.sleepPreset;
-          const active =
-            (p === 'off' && ttsState.sleepMode === 'off') ||
-            (p === 'chapter' && ttsState.sleepMode === 'chapter') ||
-            (ttsState.sleepMode === 'minutes' && btn.classList.contains('selected-minute'));
-          if (p !== 'off' && p !== 'chapter') {
-            btn.classList.toggle('active', false);
-          } else {
-            btn.classList.toggle('active', active);
+          if (p === 'off') {
+            btn.classList.toggle('active', ttsState.sleepMode === 'off');
+          } else if (p === 'chapter') {
+            btn.classList.toggle('active', ttsState.sleepMode === 'chapter');
           }
         });
 
@@ -2692,14 +3108,14 @@
         }
         ttsState.blackoutActive = true;
         const overlay = document.getElementById('bedtime-blackout-overlay');
-        overlay.classList.remove('hidden');
+        if (overlay) overlay.classList.remove('hidden');
         updateBlackoutOverlayInfo();
       }
 
       function exitBedtimeBlackoutMode() {
         ttsState.blackoutActive = false;
         const overlay = document.getElementById('bedtime-blackout-overlay');
-        overlay.classList.add('hidden');
+        if (overlay) overlay.classList.add('hidden');
         triggerEInkRefresh(true);
         showToast('Đã bật lại màn hình E-Ink');
       }
@@ -2714,7 +3130,7 @@
         document.getElementById('blackout-chapter-info').textContent =
           `Trang ${pagination.currentPage + 1} / ${pagination.totalPages} • ${ttsState.isPlaying ? 'Đang phát' : 'Đã tạm dừng'}`;
 
-        let timerMsg = 'Chế độ tắt màn hình ban đêm';
+        let timerMsg = 'Đang phát âm thanh';
         if (ttsState.sleepMode === 'minutes') {
           timerMsg = `Hẹn giờ tắt còn ${formatCountdown(ttsState.sleepEndTime - Date.now())}`;
         } else if (ttsState.sleepMode === 'chapter') {
@@ -2731,6 +3147,7 @@
         const voiceBtn = document.getElementById('btn-tts-voice');
         const statusEl = document.getElementById('tts-status-text');
 
+        if (!bar) return;
         bar.classList.toggle('hidden', !ttsState.barOpen);
         toggleTopBtn.classList.toggle('active', ttsState.barOpen || ttsState.isPlaying);
 
@@ -2769,7 +3186,7 @@
         listEl.innerHTML = '';
 
         if (!ttsState.voices.length) {
-          listEl.innerHTML = `<div class="text-xs eink-muted p-3 eink-subtle-border rounded-lg">Đang tải danh sách giọng đọc từ thiết bị...</div>`;
+          listEl.innerHTML = `<div class="text-xs eink-muted p-3 eink-subtle-border rounded-lg">Không tìm thấy giọng đọc hệ thống hoặc trình duyệt đang tải danh sách giọng.</div>`;
           return;
         }
 
@@ -2803,14 +3220,16 @@
       }
 
       /* ----------------------------------------------------------------------
-         15. MODAL, TABS & EVENT LISTENERS
+         13. MODAL, TABS & ALL INTERACTIVE EVENT BINDINGS
          ---------------------------------------------------------------------- */
       function openModal(id) {
-        document.getElementById(id).classList.remove('hidden');
+        const target = document.getElementById(id);
+        if (target) target.classList.remove('hidden');
       }
 
       function closeModal(id) {
-        document.getElementById(id).classList.add('hidden');
+        const target = document.getElementById(id);
+        if (target) target.classList.add('hidden');
       }
 
       function switchLibraryTab(tabName) {
@@ -2822,8 +3241,8 @@
 
         Object.entries(tabs).forEach(([key, pair]) => {
           const isActive = key === tabName;
-          pair.btn.classList.toggle('active', isActive);
-          pair.panel.classList.toggle('hidden', !isActive);
+          if (pair.btn) pair.btn.classList.toggle('active', isActive);
+          if (pair.panel) pair.panel.classList.toggle('hidden', !isActive);
         });
       }
 
@@ -2907,7 +3326,7 @@
 
         document.getElementById('btn-tts-screen-off').addEventListener('click', enterBedtimeBlackoutMode);
 
-        // Double-tap handler to wake from True-Black OLED Screen-Off Mode
+        // Double-tap handler to wake from OLED Black Screen Mode
         const blackoutOverlay = document.getElementById('bedtime-blackout-overlay');
         let lastBlackoutTapTime = 0;
         blackoutOverlay.addEventListener('touchend', (e) => {
@@ -2927,10 +3346,8 @@
         document.querySelectorAll('.sleep-preset-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             const preset = btn.dataset.sleepPreset;
-            document.querySelectorAll('.sleep-preset-btn').forEach(b => b.classList.remove('selected-minute', 'active'));
-            if (preset !== 'off' && preset !== 'chapter') {
-              btn.classList.add('selected-minute', 'active');
-            }
+            document.querySelectorAll('.sleep-preset-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
             setSleepTimerPreset(preset);
           });
         });
@@ -3049,7 +3466,7 @@
           document.getElementById('toc-list-container').classList.add('hidden');
         });
 
-        // Tap Zones: Left 30% Prev | Center 40% Toggle Focus Mode | Right 30% Next
+        // Tap Zones: Left 28% Prev | Center 44% Toggle Focus Mode | Right 28% Next
         el.tapLeft.addEventListener('click', () => goToPage(pagination.currentPage - 1));
         el.tapRight.addEventListener('click', () => goToPage(pagination.currentPage + 1));
         el.tapCenter.addEventListener('click', () => {
@@ -3316,20 +3733,32 @@
       }
 
       /* ----------------------------------------------------------------------
-         16. INITIALIZATION & EXACT POSITION RESUME ON DOMCONTENTLOADED
+         14. SYNCHRONOUS IMMEDIATE BOOT + ASYNC LIBRARY RESTORE
          ---------------------------------------------------------------------- */
-      window.addEventListener('DOMContentLoaded', async () => {
-        configurePdfWorker();
-        setupIosPwaManifestAndIcons();
+      function bootApp() {
+        // 1. Synchronous immediate boot: load settings, render default book & start live clock
+        loadSyncLocalStorage();
         updateClock();
         setInterval(updateClock, 15000);
 
-        if ('speechSynthesis' in window) {
-          loadSystemVoices();
-          window.speechSynthesis.onvoiceschanged = loadSystemVoices;
+        applySettingsToDOM();
+        initEvents();
+        recalculatePagination();
+        updateTtsBarUI();
+
+        // 2. Non-blocking enhancements (PWA icons, PDF.js worker, SpeechSynthesis voices)
+        configurePdfWorker();
+        setupIosPwaManifestAndIcons();
+
+        try {
+          if ('speechSynthesis' in window) {
+            loadSystemVoices();
+            window.speechSynthesis.onvoiceschanged = loadSystemVoices;
+          }
+        } catch (err) {
+          console.warn('SpeechSynthesis init note:', err);
         }
 
-        // Persist reading spot whenever user backgrounds Safari or closes PWA
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState === 'hidden') {
             persistReadingPosition({ ttsSentenceIndex: ttsState.sentenceIndex });
@@ -3339,25 +3768,33 @@
           persistReadingPosition({ ttsSentenceIndex: ttsState.sentenceIndex });
         });
 
-        applySettingsToDOM();
-        initEvents();
-        recalculatePagination();
+        // 3. Async IndexedDB library & exact reading spot restoration
+        loadAsyncLibraryBooks()
+          .then(() => {
+            const resumedBook = getCurrentBook();
+            const resumedProg = getBookProgress(resumedBook.id);
 
-        await loadState();
-        const resumedBook = getCurrentBook();
-        const resumedProg = getBookProgress(resumedBook.id);
+            applySettingsToDOM();
+            recalculatePagination(resumedProg.pageRatio || null);
+            updateTtsBarUI();
 
-        applySettingsToDOM();
-        recalculatePagination(resumedProg.pageRatio || null);
-        updateTtsBarUI();
+            if (resumedProg.updatedAt > 0 || resumedProg.chapterIndex > 0 || resumedProg.pageIndex > 0 || resumedProg.pdfPage > 1) {
+              const pageDisplay = isPdfCanvasActive()
+                ? (resumedProg.pdfPage || 1)
+                : (pagination.currentPage + 1);
+              showToast(`Đã khôi phục trang ${pageDisplay} - Chương ${resumedProg.chapterIndex + 1}`);
+            }
+          })
+          .catch(err => {
+            console.warn('Async library restore fallback:', err);
+          });
+      }
 
-        if (resumedProg.updatedAt > 0 || resumedProg.chapterIndex > 0 || resumedProg.pageIndex > 0 || resumedProg.pdfPage > 1) {
-          const pageDisplay = isPdfCanvasActive()
-            ? (resumedProg.pdfPage || 1)
-            : (pagination.currentPage + 1);
-          showToast(`Đã khôi phục trang ${pageDisplay} - Chương ${resumedProg.chapterIndex + 1}`);
-        }
-      });
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootApp);
+      } else {
+        bootApp();
+      }
     })();
   </script>
 </body>
